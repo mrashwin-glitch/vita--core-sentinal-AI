@@ -1,0 +1,40 @@
+# Node.js
+node_modules/
+node_portable/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment Secrets (Crucial to prevent leaks)
+.env
+backend/.env
+frontend/.env
+
+# Databases & User Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/sentinel.db-journal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Editor & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.agents/
+.system_generated/
+.gemini/
+build/
+dist/

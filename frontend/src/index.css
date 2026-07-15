@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-850: #1e293b;
+  
+  --font-size-2xs: 0.68rem;
+  --font-size-3xs: 0.58rem;
+  --font-size-4xs: 0.48rem;
+  --font-size-5xs: 0.38rem;
+  
+  --animate-laserScanner: laserScanner 3.5s ease-in-out infinite;
+  --animate-fadeIn: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  
+  @keyframes laserScanner {
+    0%, 100% { top: 0%; }
+    50% { top: 100%; }
+  }
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Custom CSS styling rules */
+body {
+  background-color: #020617; /* Matches slate-950 */
+  color: #f8fafc;            /* Matches slate-50/100 */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Custom glassmorphism utility */
+@utility glass-card {
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+/* Custom scrollbar for logs and sidebar tables */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glow effects */
+.glow-emerald {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.15);
+}
+
+/* Floating Particles for Login card background */
+@keyframes floatParticle {
+  0% {
+    transform: translateY(110vh) scale(1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-10vh) scale(0.4);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: absolute;
+  bottom: 0;
+  background-color: #10b981; /* Emerald green */
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981, 0 0 16px #10b981;
+  opacity: 0;
+  pointer-events: none;
+  animation: floatParticle 8s infinite linear;
+}
+
+/* Print Layout CSS for Agronomy Advisory Report */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .printable-report, .printable-report * {
+    visibility: visible;
+  }
+  
+  .printable-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+    margin: 0px !important;
+  }
+  
+  /* Reset colors to standard black-on-white text for printing */
+  .printable-report h1,
+  .printable-report h2,
+  .printable-report h3,
+  .printable-report h4,
+  .printable-report p,
+  .printable-report li,
+  .printable-report span,
+  .printable-report div {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+  
+  .printable-report .no-print,
+  .printable-report button {
+    display: none !important;
+  }
+}

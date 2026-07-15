@@ -1,0 +1,38 @@
+{
+  "crops": {
+    "rice": {
+      "name": "Rice (Oryza sativa)",
+      "optimal_nitrogen_mg_kg": { "min": 120, "max": 180 },
+      "optimal_moisture_percent": { "min": 70, "max": 85 },
+      "optimal_ph": { "min": 6.0, "max": 7.0 },
+      "nitrogen_deficiency_treatment": "Apply 50 kg of Urea (46% Nitrogen) per acre to correct a moderate deficiency. Increase to 80 kg per acre for severe deficiency.",
+      "moisture_deficiency_treatment": "Trigger flood irrigation. Apply approximately 38,000 liters of water per acre to raise soil moisture by 10%.",
+      "acidic_ph_treatment": "Apply Agricultural Lime (calcium carbonate) at 500 kg per acre to neutralize acidic soil below pH 6.0.",
+      "alkaline_ph_treatment": "Apply Elemental Sulfur at 150 kg per acre or incorporate organic compost to lower alkaline soil above pH 7.2."
+    },
+    "wheat": {
+      "name": "Wheat (Triticum aestivum)",
+      "optimal_nitrogen_mg_kg": { "min": 140, "max": 200 },
+      "optimal_moisture_percent": { "min": 45, "max": 65 },
+      "optimal_ph": { "min": 6.0, "max": 7.5 },
+      "nitrogen_deficiency_treatment": "Apply 40 kg of Ammonium Nitrate per acre for moderate deficiency. Apply 70 kg per acre for severe depletion.",
+      "moisture_deficiency_treatment": "Trigger sprinkler irrigation. Apply 19,000 liters of water per acre to raise soil moisture by 10%.",
+      "acidic_ph_treatment": "Apply Dolomitic Limestone at 400 kg per acre for soil pH below 5.8.",
+      "alkaline_ph_treatment": "Apply Gypsum (calcium sulfate) at 300 kg per acre or use ammonium-based fertilizers to counter pH above 7.8."
+    },
+    "maize": {
+      "name": "Maize / Corn (Zea mays)",
+      "optimal_nitrogen_mg_kg": { "min": 150, "max": 220 },
+      "optimal_moisture_percent": { "min": 55, "max": 75 },
+      "optimal_ph": { "min": 5.8, "max": 7.0 },
+      "nitrogen_deficiency_treatment": "Apply 60 kg of Anhydrous Ammonia or 100 kg of Ammonium Sulfate per acre to satisfy high Nitrogen demands.",
+      "moisture_deficiency_treatment": "Trigger drip irrigation. Apply 25,000 liters of water per acre to raise soil moisture by 10% in critical root-zones.",
+      "acidic_ph_treatment": "Apply hydrated lime at 350 kg per acre to adjust pH upwards if below 5.5.",
+      "alkaline_ph_treatment": "Incorporate peat moss or sulfur-coated urea to safely reduce pH values exceeding 7.2."
+    }
+  },
+  "general_calculation_logic": {
+    "moisture_formula": "Water Required (Liters) = (Optimal_Min_Moisture - Current_Moisture) * Field_Area_Acres * 2000",
+    "nitrogen_formula": "Urea Required (kg) = (Optimal_Min_Nitrogen - Current_Nitrogen) * Field_Area_Acres * 0.4"
+  }
+}
