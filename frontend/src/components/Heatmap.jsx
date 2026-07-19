@@ -1,7 +1,78 @@
-import React from 'react';
-import { Layers, MapPin, Activity, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Layers, MapPin, Activity, HelpCircle, Sliders } from 'lucide-react';
 
 export default function Heatmap({ sectors, selectedField, setSelectedField }) {
+  const [wavelength, setWavelength] = useState(524);
+  const [hoveredSector, setHoveredSector] = useState(null);
+  const histogramCanvasRef = useRef(null);
+
+  const getSectorPeakWavelength = (id) => {
+    if (id === 3) return 522; // Mycena chlorophos
+    if (id === 2) return 530; // Neonothopanus gardneri
+    if (id === 1) return 525; // Panellus stipticus
+    return 528; // Omphalotus nidiformis
+  };
+
+  useEffect(() => {
+    const canvas = histogramCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.clientWidth;
+    const h = canvas.height = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    // Dark background
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw grid
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 0.5;
+    for (let x = 20; x < w; x += 20) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 15; y < h; y += 15) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    const targetSector = hoveredSector || selectedField;
+    if (!targetSector) return;
+
+    const peakG = targetSector.id === 3 ? 522 : targetSector.id === 2 ? 530 : targetSector.id === 1 ? 525 : 528;
+    const stress = targetSector.stress_level;
+
+    const drawChannel = (color, offset, peakHeight, widthFactor) => {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      let started = false;
+      for (let x = 0; x < w; x += 3) {
+        const wl = 400 + (x / w) * 300;
+        const exp = -Math.pow(wl - (peakG + offset), 2) / (2 * Math.pow(widthFactor, 2));
+        const val = Math.exp(exp) * (h - 20) * peakHeight;
+        const y = h - 5 - val;
+        if (!started) {
+          ctx.moveTo(x, y); started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    };
+
+    drawChannel('rgba(239, 68, 68, 0.4)', 60, 0.25, 25);
+    drawChannel('rgba(59, 130, 246, 0.4)', -80, 0.35, 20);
+
+    let greenHeight = 0.85;
+    if (stress === 'medium') greenHeight = 0.5;
+    if (stress === 'high') greenHeight = 0.22;
+    drawChannel('#10b981', 0, greenHeight, 15);
+
+    ctx.fillStyle = '#10b981';
+    ctx.font = '9px monospace';
+    ctx.fillText(`${peakG}nm Peak (${targetSector.name})`, 10, 15);
+  }, [hoveredSector, selectedField]);
+
   // Map stress level to CSS classes for SVG sectors
   const getSectorStyle = (stress) => {
     switch (stress) {
@@ -52,6 +123,28 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
             </span>
           </div>
 
+          {/* Spectral bandpass filter slider */}
+          <div className="bg-slate-950/70 p-3 border border-slate-850 rounded-lg mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="text-left w-full sm:w-auto">
+              <span className="text-3xs font-bold text-slate-400 uppercase tracking-widest block">Spectral Bandpass Filter Tuning</span>
+              <span className="text-5xs text-emerald-400 font-mono">Tune wavelength scanner to resolve different biosensor glow wavelengths</span>
+            </div>
+            
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <span className="text-3xs font-mono font-bold text-emerald-400 bg-emerald-950/20 px-2.5 py-1 rounded border border-emerald-900/30 whitespace-nowrap">
+                Scan Target: {wavelength} nm
+              </span>
+              <input
+                type="range"
+                min="490"
+                max="560"
+                value={wavelength}
+                onChange={(e) => setWavelength(parseInt(e.target.value))}
+                className="w-full sm:w-36 accent-emerald-500 bg-slate-900 rounded h-1.5 cursor-pointer"
+              />
+            </div>
+          </div>
+
           {/* Interactive SVG Grid */}
           <div className="relative aspect-video w-full rounded-lg bg-slate-950/80 p-4 border border-slate-900 overflow-hidden flex items-center justify-center">
             {/* Background radar grid lines */}
@@ -66,6 +159,10 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                 const style = getSectorStyle(sector.stress_level);
                 const isSelected = selectedField.id === sector.id;
                 
+                const peakL = getSectorPeakWavelength(sector.id);
+                const wavelengthDiff = Math.abs(wavelength - peakL);
+                const matchRatio = Math.max(0, 1 - (wavelengthDiff / 20)); // fades completely at 20nm offset
+
                 // Define coordinates for the 4 sectors
                 // 1: North-West, 2: South-East, 3: North-East, 4: South-West
                 let points = "";
@@ -89,6 +186,8 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                   <g 
                     key={sector.id} 
                     onClick={() => setSelectedField(sector)}
+                    onMouseEnter={() => setHoveredSector(sector)}
+                    onMouseLeave={() => setHoveredSector(null)}
                     className="cursor-pointer group"
                   >
                     {/* Shadow filter glow for selected sector */}
@@ -98,6 +197,7 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                         fill="transparent"
                         stroke={style.stroke}
                         strokeWidth="10"
+                        strokeOpacity={matchRatio * 0.4}
                         className="opacity-25 blur-sm"
                       />
                     )}
@@ -106,7 +206,9 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                     <polygon
                       points={points}
                       fill={style.fill}
+                      fillOpacity={matchRatio * 0.15}
                       stroke={isSelected ? '#f43f5e' : style.stroke}
+                      strokeOpacity={matchRatio}
                       strokeWidth={isSelected ? "3" : "1.5"}
                       className="transition-all duration-300 group-hover:fill-opacity-30"
                     />
@@ -117,6 +219,7 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                       y={cy - 15}
                       textAnchor="middle"
                       fill={isSelected ? '#f43f5e' : '#f8fafc'}
+                      fillOpacity={Math.max(0.2, matchRatio)}
                       className="text-sm font-bold font-sans tracking-wide transition-colors duration-200"
                     >
                       {sector.name.split(' ')[0]} {sector.name.split(' ')[1] || ''}
@@ -128,6 +231,7 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                       y={cy + 10}
                       textAnchor="middle"
                       fill="#94a3b8"
+                      fillOpacity={Math.max(0.2, matchRatio)}
                       className="text-xs font-sans uppercase font-medium tracking-wider"
                     >
                       {sector.crop_type} ({sector.area_acres} Ac)
@@ -140,6 +244,7 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
                         y={cy + 30}
                         textAnchor="middle"
                         fill="#cbd5e1"
+                        fillOpacity={matchRatio}
                         className="text-2xs font-mono font-medium"
                       >
                         N: {sector.nitrogen_val} | M: {sector.moisture_val}%
@@ -238,22 +343,34 @@ export default function Heatmap({ sectors, selectedField, setSelectedField }) {
               {selectedField.nitrogen_val !== null && (
                 <div className="space-y-2 border-t border-slate-850 pt-2">
                   <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">Real-Time Sensor Returns</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded bg-slate-950 p-2 text-center border border-slate-850">
-                      <span className="block text-3xs font-semibold text-slate-500 uppercase">Nitrogen</span>
-                      <span className="text-xs font-mono font-bold text-slate-200">{selectedField.nitrogen_val} <span className="text-4xs text-slate-500 font-sans">mg/kg</span></span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <div className="rounded bg-slate-950 p-1.5 text-center border border-slate-850 overflow-hidden">
+                      <span className="block text-[8px] font-bold tracking-tighter text-slate-500 uppercase">Nitrogen</span>
+                      <span className="text-2xs font-mono font-bold text-slate-200 block truncate mt-0.5">{selectedField.nitrogen_val} <span className="text-[7px] text-slate-500 font-sans font-normal">mg/kg</span></span>
                     </div>
-                    <div className="rounded bg-slate-950 p-2 text-center border border-slate-850">
-                      <span className="block text-3xs font-semibold text-slate-500 uppercase">Moisture</span>
-                      <span className="text-xs font-mono font-bold text-slate-200">{selectedField.moisture_val}%</span>
+                    <div className="rounded bg-slate-950 p-1.5 text-center border border-slate-850 overflow-hidden">
+                      <span className="block text-[8px] font-bold tracking-tighter text-slate-500 uppercase">Moisture</span>
+                      <span className="text-2xs font-mono font-bold text-slate-200 block truncate mt-0.5">{selectedField.moisture_val}%</span>
                     </div>
-                    <div className="rounded bg-slate-950 p-2 text-center border border-slate-850">
-                      <span className="block text-3xs font-semibold text-slate-500 uppercase">pH</span>
-                      <span className="text-xs font-mono font-bold text-slate-200">{selectedField.ph_val}</span>
+                    <div className="rounded bg-slate-950 p-1.5 text-center border border-slate-850 overflow-hidden">
+                      <span className="block text-[8px] font-bold tracking-tighter text-slate-500 uppercase">pH Balance</span>
+                      <span className="text-2xs font-mono font-bold text-slate-200 block truncate mt-0.5">{selectedField.ph_val}</span>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Spectral Histogram Canvas */}
+              <div className="space-y-2 border-t border-slate-850 pt-2 text-left">
+                <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider block">Live Hover Spectrograph</span>
+                <canvas
+                  ref={histogramCanvasRef}
+                  className="w-full h-20 rounded bg-slate-950 border border-slate-850"
+                />
+                <span className="block text-[8px] text-slate-500 font-mono leading-tight">
+                  *Graphs real-time R/G/B camera absorption & bioluminescence peaks (400nm - 700nm) for target sector.
+                </span>
+              </div>
             </div>
           </div>
 

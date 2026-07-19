@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Bell, Smartphone, ShieldAlert, CheckCircle, BarChart3, UploadCloud, Map, Sparkles, UserCheck, Camera } from 'lucide-react';
+import { Activity, Bell, Smartphone, ShieldAlert, CheckCircle, BarChart3, UploadCloud, Map, Sparkles, UserCheck, Camera, Settings, Sliders, Orbit, Landmark, BookOpen } from 'lucide-react';
 import Heatmap from './Heatmap';
 import GlowVisualizer from './GlowVisualizer';
 import LiveDroneFeed from './LiveDroneFeed';
 import PredictiveAnalytics from './PredictiveAnalytics';
 import AIAgronomyReport from './AIAgronomyReport';
 import TeamInfo from './TeamInfo';
+import LuminescenceSpectrometry from './LuminescenceSpectrometry';
+import BioEconomicLedger from './BioEconomicLedger';
+import ScientificLibrary from './ScientificLibrary';
 
 export default function Dashboard({ backendUrl, onLogout }) {
   const [activeTab, setActiveTab] = useState('map');
@@ -14,6 +17,13 @@ export default function Dashboard({ backendUrl, onLogout }) {
   const [alerts, setAlerts] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [importedImage, setImportedImage] = useState(null);
+  const [thresholds, setThresholds] = useState({
+    rice: { minN: 120, minM: 70, minPh: 6.0, maxPh: 7.0 },
+    wheat: { minN: 140, minM: 45, minPh: 6.0, maxPh: 7.5 },
+    maize: { minN: 150, minM: 55, minPh: 5.8, maxPh: 7.0 }
+  });
 
   // Derived selected field based on active ID
   const selectedField = sectors.find(s => s.id === selectedFieldId) || sectors[0];
@@ -109,6 +119,11 @@ export default function Dashboard({ backendUrl, onLogout }) {
               )}
             </div>
 
+            {/* Threshold Settings */}
+            <div className="cursor-pointer" onClick={() => setShowSettingsModal(true)}>
+              <Settings className="h-5 w-5 text-slate-400 hover:text-slate-100 transition-colors" />
+            </div>
+
             <button
               onClick={onLogout}
               className="rounded-lg border border-slate-800 bg-slate-900/60 px-3.5 py-1.5 text-xs font-semibold text-slate-350 hover:bg-slate-800 transition-colors"
@@ -179,6 +194,36 @@ export default function Dashboard({ backendUrl, onLogout }) {
             </button>
 
             <button
+              onClick={() => setActiveTab('spectrometry')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'spectrometry' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              }`}
+            >
+              <Sliders className="h-4 w-4" />
+              Sensor Validation & Calibration
+            </button>
+
+            <button
+              onClick={() => setActiveTab('economic-ledger')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'economic-ledger' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              }`}
+            >
+              <Landmark className="h-4 w-4" />
+              Carbon & Subsidy Ledger
+            </button>
+
+             <button
+              onClick={() => setActiveTab('scientific-library')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'scientific-library' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              }`}
+            >
+              <BookOpen className="h-4 w-4" />
+              Scientific Library
+            </button>
+
+            <button
               onClick={() => setActiveTab('team')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'team' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -228,7 +273,7 @@ export default function Dashboard({ backendUrl, onLogout }) {
         {/* Dynamic Center Work Area */}
         <div className="lg:col-span-3 space-y-6">
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 no-print">
             
             {/* Stress widget */}
             <div className="rounded-xl border border-slate-900 bg-slate-950/60 p-4 flex flex-col justify-between">
@@ -257,7 +302,7 @@ export default function Dashboard({ backendUrl, onLogout }) {
                 </span>
                 <span className="text-4xs text-slate-500 font-sans ml-1">mg/kg</span>
               </div>
-              <span className="text-4xs text-slate-500 mt-2 block">Target min: {selectedField.crop_type === 'rice' ? 120 : selectedField.crop_type === 'wheat' ? 140 : 150}</span>
+              <span className="text-4xs text-slate-500 mt-2 block">Target min: {thresholds[selectedField.crop_type]?.minN || 150}</span>
             </div>
 
             {/* Moisture widget */}
@@ -268,7 +313,7 @@ export default function Dashboard({ backendUrl, onLogout }) {
                   {selectedField.moisture_val !== null ? `${selectedField.moisture_val}%` : '--'}
                 </span>
               </div>
-              <span className="text-4xs text-slate-500 mt-2 block">Target min: {selectedField.crop_type === 'rice' ? '70%' : selectedField.crop_type === 'wheat' ? '45%' : '55%'}</span>
+              <span className="text-4xs text-slate-500 mt-2 block">Target min: {thresholds[selectedField.crop_type]?.minM || 55}%</span>
             </div>
 
             {/* pH widget */}
@@ -279,7 +324,7 @@ export default function Dashboard({ backendUrl, onLogout }) {
                   {selectedField.ph_val !== null ? `${selectedField.ph_val}` : '--'}
                 </span>
               </div>
-              <span className="text-4xs text-slate-500 mt-2 block">Target pH: 6.0 - 7.2</span>
+              <span className="text-4xs text-slate-500 mt-2 block">Target pH: {thresholds[selectedField.crop_type]?.minPh || 6.0} - {thresholds[selectedField.crop_type]?.maxPh || 7.2}</span>
             </div>
 
           </div>
@@ -299,17 +344,24 @@ export default function Dashboard({ backendUrl, onLogout }) {
                 selectedField={selectedField} 
                 backendUrl={backendUrl}
                 onAnalysisSuccess={fetchData}
+                importedImage={importedImage}
+                setImportedImage={setImportedImage}
               />
             )}
 
             {activeTab === 'live-feed' && (
-              <LiveDroneFeed />
+              <LiveDroneFeed 
+                setActiveTab={setActiveTab}
+                setImportedImage={setImportedImage}
+                selectedField={selectedField}
+              />
             )}
 
             {activeTab === 'predictive' && (
               <PredictiveAnalytics 
                 selectedField={selectedField}
                 historyData={history}
+                thresholds={thresholds}
               />
             )}
 
@@ -321,6 +373,22 @@ export default function Dashboard({ backendUrl, onLogout }) {
               />
             )}
 
+            {activeTab === 'spectrometry' && (
+              <LuminescenceSpectrometry
+                selectedField={selectedField}
+                backendUrl={backendUrl}
+                onCalibrationSaved={fetchData}
+              />
+            )}
+
+            {activeTab === 'economic-ledger' && (
+              <BioEconomicLedger selectedField={selectedField} />
+            )}
+
+            {activeTab === 'scientific-library' && (
+              <ScientificLibrary />
+            )}
+
             {activeTab === 'team' && (
               <TeamInfo />
             )}
@@ -328,6 +396,91 @@ export default function Dashboard({ backendUrl, onLogout }) {
         </div>
 
       </main>
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl relative">
+            <h3 className="text-md font-bold text-slate-100 flex items-center gap-2 mb-4">
+              <Settings className="h-5 w-5 text-emerald-400" />
+              Configure Alert Thresholds
+            </h3>
+            
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+              {Object.keys(thresholds).map((crop) => (
+                <div key={crop} className="rounded-lg bg-slate-950 p-3 border border-slate-850 space-y-3">
+                  <span className="block text-2xs font-bold text-emerald-400 uppercase tracking-wider">{crop.toUpperCase()} Target Metrics</span>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-5xs font-bold text-slate-500 uppercase tracking-wider block">Min Nitrogen (mg/kg)</label>
+                      <input
+                        type="number"
+                        value={thresholds[crop].minN}
+                        onChange={(e) => setThresholds({
+                          ...thresholds,
+                          [crop]: { ...thresholds[crop], minN: parseInt(e.target.value) || 0 }
+                        })}
+                        className="w-full mt-1 rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-5xs font-bold text-slate-500 uppercase tracking-wider block">Min Moisture (%)</label>
+                      <input
+                        type="number"
+                        value={thresholds[crop].minM}
+                        onChange={(e) => setThresholds({
+                          ...thresholds,
+                          [crop]: { ...thresholds[crop], minM: parseInt(e.target.value) || 0 }
+                        })}
+                        className="w-full mt-1 rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-5xs font-bold text-slate-500 uppercase tracking-wider block">Min pH</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={thresholds[crop].minPh}
+                        onChange={(e) => setThresholds({
+                          ...thresholds,
+                          [crop]: { ...thresholds[crop], minPh: parseFloat(e.target.value) || 0.0 }
+                        })}
+                        className="w-full mt-1 rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-5xs font-bold text-slate-500 uppercase tracking-wider block">Max pH</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={thresholds[crop].maxPh}
+                        onChange={(e) => setThresholds({
+                          ...thresholds,
+                          [crop]: { ...thresholds[crop], maxPh: parseFloat(e.target.value) || 0.0 }
+                        })}
+                        className="w-full mt-1 rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-440 transition-colors"
+              >
+                Apply Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-4xs text-slate-500">

@@ -95,21 +95,40 @@ body {
   pointer-events: none;
   animation: floatParticle 8s infinite linear;
 }
-
 /* Print Layout CSS for Agronomy Advisory Report */
 @media print {
-  body * {
-    visibility: hidden;
+  /* 1. Hide all elements by default */
+  body > * {
+    display: none !important;
   }
   
-  .printable-report, .printable-report * {
-    visibility: visible;
+  /* 2. Reset backgrounds and hide borders of parent structures to prevent blank page spacing */
+  html, body, #root, #root > div, .min-h-screen, .flex-1, main, .grid {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important; /* overrides flex/grid structure */
+    position: static !important;
+    overflow: visible !important;
   }
-  
+
+  /* 3. Hide all non-essential columns, sidebar, header, control widgets */
+  header, footer, nav, aside, button, .no-print,
+  .lg\:col-span-1, /* Sidebar */
+  .sm\:grid-cols-3, /* Metrics cards */
+  .flex-wrap,
+  .md\:col-span-1 { /* Chat panel side */
+    display: none !important;
+  }
+
+  /* 4. Force report view area to occupy full page width starting at the top */
   .printable-report {
-    position: absolute;
-    left: 0;
-    top: 0;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     background: #ffffff !important;
@@ -118,23 +137,53 @@ body {
     box-shadow: none !important;
     padding: 0px !important;
     margin: 0px !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
   }
-  
-  /* Reset colors to standard black-on-white text for printing */
+
+  /* 5. Re-format text and borders to crisp print-friendly black/dark colors */
+  .printable-report * {
+    color: #000000 !important;
+    background: transparent !important;
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+
   .printable-report h1,
   .printable-report h2,
   .printable-report h3,
-  .printable-report h4,
-  .printable-report p,
-  .printable-report li,
-  .printable-report span,
-  .printable-report div {
+  .printable-report h4 {
     color: #000000 !important;
-    background: transparent !important;
+    font-weight: bold !important;
   }
-  
-  .printable-report .no-print,
-  .printable-report button {
-    display: none !important;
+
+  /* Keep certificate border styling visible on paper */
+  .printable-report .border-double {
+    border-style: double !important;
+    border-color: #b45309 !important; /* Solid dark amber for certificate border */
+    border-width: 3px !important;
+  }
+
+  .printable-report .border-b {
+    border-bottom-width: 1px !important;
+    border-bottom-color: #e2e8f0 !important;
+  }
+
+  /* Background shading for metadata tables */
+  .printable-report .bg-slate-950\/70 {
+    background-color: #f8fafc !important; /* slate-50 background for clean printing */
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .printable-report .text-emerald-400 {
+    color: #047857 !important; /* emerald-700 for high-contrast green text */
+  }
+
+  .printable-report .text-amber-500 {
+    color: #b45309 !important; /* amber-700 for high-contrast gold text */
+  }
+
+  .printable-report .text-red-400 {
+    color: #b91c1c !important; /* red-700 for warning stamps */
   }
 }

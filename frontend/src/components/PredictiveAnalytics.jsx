@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ReferenceLine } from 'recharts';
-import { AlertTriangle, Clock, ShieldAlert, CheckCircle } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ReferenceLine, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { AlertTriangle, Clock, ShieldAlert, CheckCircle, Activity } from 'lucide-react';
 
-export default function PredictiveAnalytics({ selectedField, historyData }) {
+export default function PredictiveAnalytics({ selectedField, historyData, thresholds }) {
   const [forecastData, setForecastData] = useState([]);
   const [criticalTime, setCriticalTime] = useState(null);
   const [nutrientState, setNutrientState] = useState('healthy');
+
+  const cropThresh = thresholds?.[selectedField.crop_type] || { minN: 150, minM: 55 };
+  const moistureLimit = Math.round(cropThresh.minM * 0.5); 
+  const nitrogenLimit = Math.round(cropThresh.minN * 0.5);
 
   useEffect(() => {
     // Generate 48-hour forecast based on the current field trends
@@ -47,10 +51,10 @@ export default function PredictiveAnalytics({ selectedField, historyData }) {
       });
 
       // Check thresholds
-      if (predM < 25 && hoursToMoistureCrash === null) {
+      if (predM < moistureLimit && hoursToMoistureCrash === null) {
         hoursToMoistureCrash = h;
       }
-      if (predN < 60 && hoursToNitrogenCrash === null) {
+      if (predN < nitrogenLimit && hoursToNitrogenCrash === null) {
         hoursToNitrogenCrash = h;
       }
     }
@@ -70,7 +74,41 @@ export default function PredictiveAnalytics({ selectedField, historyData }) {
       setNutrientState('healthy');
     }
 
-  }, [selectedField, historyData]);
+  }, [selectedField, historyData, thresholds, moistureLimit, nitrogenLimit]);
+
+  // Prepare data for Radar Chart
+  const radarData = [
+    {
+      subject: 'Nitrogen',
+      Actual: Math.min(100, Math.round((selectedField.nitrogen_val || 0) / (cropThresh.minN * 1.5) * 100)),
+      Target: 66,
+      fullMark: 100,
+    },
+    {
+      subject: 'Moisture',
+      Actual: Math.min(100, Math.round((selectedField.moisture_val || 0) / (cropThresh.minM * 1.5) * 100)),
+      Target: 66,
+      fullMark: 100,
+    },
+    {
+      subject: 'pH Balance',
+      Actual: Math.max(0, Math.round(100 - Math.abs((selectedField.ph_val || 7.0) - ((cropThresh.minPh + cropThresh.maxPh)/2)) * 30)),
+      Target: 85,
+      fullMark: 100,
+    },
+    {
+      subject: 'Mycelium Vitality',
+      Actual: selectedField.stress_level === 'low' ? 95 : selectedField.stress_level === 'medium' ? 60 : 25,
+      Target: 80,
+      fullMark: 100,
+    },
+    {
+      subject: 'Microbial Density',
+      Actual: selectedField.stress_level === 'low' ? 88 : selectedField.stress_level === 'medium' ? 55 : 30,
+      Target: 75,
+      fullMark: 100,
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -124,49 +162,74 @@ export default function PredictiveAnalytics({ selectedField, historyData }) {
         </div>
       )}
 
-      {/* Chart */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
-        <h3 className="text-md font-semibold text-slate-200 mb-4 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-cyan-400" />
-          48h Depletion Projection Chart (Crop: {selectedField.crop_type.toUpperCase()})
-        </h3>
-        
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={forecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorM" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#22d3ee" stopOpacity={0.0}/>
-                </linearGradient>
-                <linearGradient id="colorN" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="hour" stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
-              />
-              <Legend verticalAlign="top" height={36} />
-              
-              {/* Critical threshold lines */}
-              <ReferenceLine y={25} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Moisture Limit (25%)', fill: '#ef4444', position: 'insideRight', fontSize: 10 }} />
-              <ReferenceLine y={60} stroke="#f97316" strokeDasharray="3 3" label={{ value: 'Nitrogen Limit (60 mg/kg)', fill: '#f97316', position: 'insideRight', fontSize: 10 }} />
-              
-              <Area name="Moisture (%)" type="monotone" dataKey="Moisture" stroke="#22d3ee" fillOpacity={1} fill="url(#colorM)" strokeWidth={2} />
-              <Area name="Nitrogen (mg/kg)" type="monotone" dataKey="Nitrogen" stroke="#10b981" fillOpacity={1} fill="url(#colorN)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
+      {/* Two column Grid for charts */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Radar Chart */}
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
+          <h3 className="text-md font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-emerald-400" />
+            Biological Soil Target Correlation
+          </h3>
+          
+          <div className="h-64 w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                <PolarGrid stroke="#1e293b" />
+                <PolarAngleAxis dataKey="subject" stroke="#94a3b8" fontSize={9} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" fontSize={8} />
+                <Radar name="Current Actual" dataKey="Actual" stroke="#10b981" fill="#10b981" fillOpacity={0.25} />
+                <Radar name="Target Envelope" dataKey="Target" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} />
+                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                <Legend verticalAlign="bottom" height={24} fontSize={10} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 48h Depletion Area Chart */}
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
+          <h3 className="text-md font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-cyan-400" />
+            48h Depletion Projection Chart
+          </h3>
+          
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={forecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorM" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#22d3ee" stopOpacity={0.0}/>
+                  </linearGradient>
+                  <linearGradient id="colorN" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="hour" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                  labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
+                />
+                <Legend verticalAlign="top" height={36} />
+                
+                {/* Critical threshold lines */}
+                <ReferenceLine y={moistureLimit} stroke="#ef4444" strokeDasharray="3 3" label={{ value: `Moisture Limit (${moistureLimit}%)`, fill: '#ef4444', position: 'insideRight', fontSize: 10 }} />
+                <ReferenceLine y={nitrogenLimit} stroke="#f97316" strokeDasharray="3 3" label={{ value: `Nitrogen Limit (${nitrogenLimit} mg/kg)`, fill: '#f97316', position: 'insideRight', fontSize: 10 }} />
+                
+                <Area name="Moisture (%)" type="monotone" dataKey="Moisture" stroke="#22d3ee" fillOpacity={1} fill="url(#colorM)" strokeWidth={2} />
+                <Area name="Nitrogen (mg/kg)" type="monotone" dataKey="Nitrogen" stroke="#10b981" fillOpacity={1} fill="url(#colorN)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Mechanics description */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Predictive Mathematics</h4>
+        <h4 className="text-xs font-semibold text-slate-350 uppercase tracking-wider mb-2">Predictive Mathematics</h4>
         <p className="text-xs text-slate-400 leading-relaxed">
           {"The forecast engine extracts the differential slope \\(\\frac{dG}{dt}\\) of the bioluminescent glow intensity and coverage area."}
           {" By solving the local decay model, the system calculates the decay vectors of soil Nitrogen and moisture against current transpiration coefficients and evaporation forecasts, projecting boundaries up to 48 hours in advance."}

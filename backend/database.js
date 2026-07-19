@@ -91,6 +91,38 @@ const initializeDb = async () => {
   `);
 
   // Seed default admin user if empty
+  await runAsync(`
+    CREATE TABLE IF NOT EXISTS sensor_calibration (
+      field_id INTEGER PRIMARY KEY,
+      species_id TEXT NOT NULL,
+      gain REAL NOT NULL DEFAULT 1.2,
+      cutoff REAL NOT NULL DEFAULT 15.0,
+      model_type TEXT NOT NULL DEFAULT 'sigmoidal',
+      ambient_lux REAL NOT NULL DEFAULT 3.0,
+      mycelium_age INTEGER NOT NULL DEFAULT 10,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (field_id) REFERENCES field_data(id)
+    )
+  `);
+
+  // Add validation columns to predictions table if they don't exist
+  try {
+    await runAsync("ALTER TABLE predictions ADD COLUMN ambient_lux REAL DEFAULT 3.0");
+  } catch (e) {}
+  try {
+    await runAsync("ALTER TABLE predictions ADD COLUMN mycelium_age INTEGER DEFAULT 10");
+  } catch (e) {}
+  try {
+    await runAsync("ALTER TABLE predictions ADD COLUMN validation_status TEXT DEFAULT 'passed'");
+  } catch (e) {}
+  try {
+    await runAsync("ALTER TABLE predictions ADD COLUMN validation_reason TEXT");
+  } catch (e) {}
+  try {
+    await runAsync("ALTER TABLE predictions ADD COLUMN validation_code TEXT DEFAULT 'SENSOR_OK'");
+  } catch (e) {}
+
+  // Seed default admin user if empty
   const user = await getAsync('SELECT id FROM users WHERE email = ?', ['admin@vitacore.ai']);
   if (!user) {
     const salt = await bcrypt.genSalt(10);
@@ -119,6 +151,23 @@ const initializeDb = async () => {
       );
     }
     console.log('Seeded default field sectors');
+    
+    const calibrations = await allAsync('SELECT field_id FROM sensor_calibration');
+    if (calibrations.length === 0) {
+      const defaultCalibrations = [
+        { field_id: 1, species_id: 'panellus_stipticus', gain: 1.2, cutoff: 15.0, model_type: 'sigmoidal', ambient_lux: 2.0, mycelium_age: 12 },
+        { field_id: 2, species_id: 'neonothopanus_gardneri', gain: 1.5, cutoff: 10.0, model_type: 'sigmoidal', ambient_lux: 1.0, mycelium_age: 8 },
+        { field_id: 3, species_id: 'mycena_chlorophos', gain: 1.2, cutoff: 15.0, model_type: 'sigmoidal', ambient_lux: 3.0, mycelium_age: 10 },
+        { field_id: 4, species_id: 'omphalotus_nidiformis', gain: 1.0, cutoff: 20.0, model_type: 'linear', ambient_lux: 4.0, mycelium_age: 15 }
+      ];
+      for (const c of defaultCalibrations) {
+        await runAsync(
+          'INSERT INTO sensor_calibration (field_id, species_id, gain, cutoff, model_type, ambient_lux, mycelium_age) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [c.field_id, c.species_id, c.gain, c.cutoff, c.model_type, c.ambient_lux, c.mycelium_age]
+        );
+      }
+      console.log('Seeded default sensor calibrations');
+    }
     
     // Seed historical prediction data to create realistic charts (past 7 days)
     const seededFields = await allAsync('SELECT id, crop_type FROM field_data');
